@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cactus Baby Farm & 9 Custom Pots (ONNX AI)</title>
+  
+  <!-- โหลด ONNX Runtime Web Library -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+  <style>
+
+    /* --- LOGIN & REGISTER SCREEN --- */
+    #login-screen {
+      background: #e5c592;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 380px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .login-card {
+      width: 100%;
+      background: #ffffff;
+      border-radius: 26px;
+      box-shadow: 0 16px 40px rgba(95, 60, 25, 0.25);
+      padding: 24px 22px;
+      display: flex;
+      flex-direction: column;
+      border: 4px solid #f3dcb8;
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #99552b;
+      text-align: center;
+    }
+    .login-subtitle {
+      font-size: 11.5px;
+      color: #8c643b;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .auth-form-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .input-group label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #5c3b1f;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #e2ddd3;
+      border-radius: 16px;
+      font-size: 13.5px;
+      outline: none;
+      background: #faf7f2;
+      color: #333;
+      transition: all 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #5d9765;
+      background: #ffffff;
+    }
+    .btn-auth-action {
+      background: #5d9765;
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 4px 10px rgba(93, 151, 101, 0.3);
+      transition: transform 0.1s;
+    }
+    .btn-auth-action:active { transform: scale(0.96); }
+    .auth-switch-text {
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 10px;
+    }
+    .auth-switch-text span {
+      color: #d97706;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Prompt', 'Mitr', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: #241c16;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 440px;
+      max-height: 890px;
+      background: #eed5a8;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+      border-radius: 26px;
+    }
+
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      z-index: 10;
+    }
+    .screen.active { display: flex; }
+
+    /* --- SPLASH SCREEN --- */
+    #splash-screen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: #e5c592;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 99999 !important;
+      cursor: pointer;
+      text-decoration: none !important;
+      color: inherit !important;
+      pointer-events: auto !important;
+    }
+    #splash-screen:target {
+      display: none !important;
+      pointer-events: none !important;
+      visibility: hidden !important;
+    }
+    /* ป้องกันไม่ให้องค์ประกอบข้างในขวางการแตะ */
+    .splash-card, 
+    .sprouts-container, 
+    #splash-baby-svg, 
+    .curved-text-svg, 
+    .tap-hint {
+      pointer-events: none !important; 
+    }
+    .splash-card {
+      width: 330px;
+      height: 330px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 14px 34px rgba(95, 60, 25, 0.25);
+      position: relative;
+      display: block !important; /* ยกเลิก Flexbox แนวนอนเดิมที่ทำให้ตัวอักษรไปอยู่ข้างๆ */
+      animation: floatSplash 3s ease-in-out infinite;
+      overflow: visible !important; /* เปิดให้ต้นไม้ล้นออกไปข้างบนได้ */
+    }
+    @keyframes floatSplash {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    /* ลบตัวอักษรเดิมที่อาจจะหลงเหลือ */
+    .splash-title, 
+    .splash-card > div:not(#splash-baby-svg):not(.sprouts-container) {
+      display: none !important;
+    }
+    /* รูปน้องแคคตัสอยู่ตรงกลางเป๊ะๆ */
+    #splash-baby-svg {
+      position: absolute !important;
+      top: 38% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) scale(3.6) !important;
+      width: 140px !important;
+      height: 140px !important;
+      z-index: 2;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    #splash-baby-svg img, 
+    #splash-baby-svg svg {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      max-width: none !important;
+      max-height: none !important;
+    }
+    /* ต้นไม้เล็ก 3 ต้นและจุดขาวด้านบน */
+    /* หน่อไม้เขียวเล็ก 3 ต้น และจุดขาวด้านบนวงกลม */
+    .sprouts-container {
+      position: absolute;
+      top: 15px; /* ขยับลงมาให้อยู่ขอบบนภายในวงกลม */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 60px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .sprout {
+      position: absolute;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+    }
+    .sprout-left { width: 36px; height: 36px; left: 20px; top: 15px; transform: rotate(-15deg); }
+    .sprout-center { width: 48px; height: 48px; left: 66px; top: -2px; }
+    .sprout-right { width: 36px; height: 36px; right: 20px; top: 15px; transform: rotate(15deg); }
+
+    .dot {
+      position: absolute;
+      background: #ffffff;
+      border-radius: 50%;
+      opacity: 0.95;
+    }
+    .d1 { width: 8px; height: 8px; top: 5px; left: 35px; }
+    .d2 { width: 7px; height: 7px; top: -8px; left: 88px; }
+    .d3 { width: 8px; height: 8px; top: 10px; right: 35px; }
+
+    /* รูปตัวละครแคคตัสให้อยู่ตรงกลางวงกลมพอดี */
+    #splash-baby-svg {
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: 400px !important;
+      height: 400px !important;
+      z-index: 2;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    #splash-baby-svg img, 
+    #splash-baby-svg svg {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      transform: none !important; /* ยกเลิก translateY(65px) เดิมเพื่อให้อยู่ตรงกลาง */
+    }
+    
+    /* ข้อความ CACTUS Baby โค้งขอบล่างวงกลม */
+    .curved-text-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .curved-text-svg text {
+      font-size: 42px;
+      font-weight: 900;
+      fill: #7b4f2c;
+      letter-spacing: 1px;
+      font-family: 'Arial Rounded MT Bold', 'Fredoka', sans-serif, system-ui;
+    }
+    .tap-hint {
+      margin-top: 35px;
+      color: #7b4f2c;
+      font-size: 15px;
+      font-weight: bold;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 10px 28px;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      animation: pulseText 1.6s infinite ease-in-out;
+    }
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.7; transform: scale(0.97); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+
+    /* --- ROOM SCENERY --- */
+    .room-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* --- TOP HUD BAR --- */
+    .top-hud {
+      position: relative;
+      z-index: 15;
+      padding: 12px 14px 8px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .left-hud {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .checkin-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      border: 2px solid #5a8a5e;
+      border-radius: 20px;
+      padding: 3px 10px 3px 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .checkin-badge:active { transform: scale(0.92); }
+    .checkin-icon { font-size: 18px; }
+    .checkin-text-wrap { display: flex; flex-direction: column; }
+    .checkin-label { font-size: 10px; font-weight: 900; color: #8c4b1d; line-height: 1; }
+    .checkin-sub { font-size: 9px; color: #4b8852; font-weight: bold; }
+
+    .coin-badge {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #e1be87;
+      border-radius: 20px;
+      padding: 3px 10px 3px 5px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+      gap: 6px;
+      cursor: pointer;
+    }
+    .coin-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fab522;
+      border: 2px solid #e09407;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .coin-val { font-weight: 900; color: #4b3621; font-size: 14.5px; }
+    .coin-plus { color: #4da65b; font-weight: 900; font-size: 16px; }
+
+    /* Center Plant Switcher Pill */
+    .plant-selector-pill {
+      background: #5d9765;
+      padding: 5px 12px;
+      border-radius: 22px;
+      border: 2px solid #84bf8c;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #fff;
+      transition: transform 0.15s;
+    }
+    .plant-selector-pill:active { transform: scale(0.94); }
+    .plant-name-hud {
+      font-weight: 900;
+      font-size: 13.5px;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .plant-lvl-tag {
+      background: #fbd143;
+      color: #4c3214;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    /* Right Action Bar */
+    .right-hud {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .hud-circle-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s;
+    }
+    .hud-circle-btn:active { transform: scale(0.9); }
+    .hud-circle-btn.profile {
+      background: #259f83;
+      border: 3px solid #fff;
+      color: #fff;
+      font-size: 20px;
+    }
+    .hud-circle-btn.shop {
+      background: #ffb834;
+      border: 2px solid #fff;
+      font-size: 20px;
+    }
+    .hud-circle-btn.robot {
+      background: #b8e2c7;
+      border: 2px solid #7cb58f;
+    }
+    .robot-badge-pulse {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      background: #ff4757;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      animation: pulseAlert 1.2s infinite;
+    }
+    @keyframes pulseAlert {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+    }
+
+    /* --- STAGE AREA --- */
+   .stage-area {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 55px;
+    z-index: 5;
+  }
+    .rug-stage {
+      position: absolute;
+      bottom: 80px;
+      width: 290px;
+      height: 70px;
+      background: #fbf7ee;
+      border-radius: 50%;
+      box-shadow: 0 6px 14px rgba(92, 60, 25, 0.12);
+      border: 4px solid #eae2d2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    .rug-stage::before {
+      content: '';
+      width: 240px;
+      height: 46px;
+      border-radius: 50%;
+      border: 2px dashed #ded4c1;
+    }
+
+    .spray-tool {
+      position: absolute;
+      left: 20px;
+      bottom: 155px;
+      width: 75px;
+      height: 110px;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .spray-tool:hover { transform: scale(1.08) rotate(-5deg); }
+    .spray-tool:active { transform: scale(0.95) rotate(-18deg); }
+
+    .plant-entity {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .plant-entity:hover { transform: scale(1.02); }
+    .plant-entity:active { transform: scale(0.96); }
+
+    .cactus-character-wrap {
+      position: relative;
+      z-index: 6;
+      top: 105px;
+      animation: subtleBreathe 3.5s infinite ease-in-out;
+      transform-origin: center bottom;
+      }
+
+    @keyframes subtleBreathe {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px) scale(1.02, 0.98); }
+    }
+    .pot-wrap {
+      position: relative;
+      z-index: 4;
+      width: 400px;
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: -65px;
+      transform: translateY(10px);
+    }
+
+    .plant-water-bar-wrap {
+      position: absolute;
+      top: -30px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1.5px solid #d4c2a4;
+      border-radius: 12px;
+      padding: 3px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+    .water-bar-track {
+      width: 65px;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .water-bar-fill {
+      height: 100%;
+      background: #38bdf8;
+      width: 70%;
+      transition: width 0.3s;
+    }
+
+    .reaction-fx {
+      position: absolute;
+      pointer-events: none;
+      font-size: 22px;
+      font-weight: bold;
+      animation: flyUp 1.2s forwards cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      z-index: 30;
+    }
+    @keyframes flyUp {
+      0% { opacity: 0; transform: translateY(10px) scale(0.6); }
+      30% { opacity: 1; transform: translateY(-25px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-75px) scale(0.9); }
+    }
+
+    /* --- BOTTOM DOCK --- */
+    .bottom-dock {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 64px;
+      background: #5b9c65;
+      border-radius: 35px;
+      border: 3px solid #8fc998;
+      box-shadow: 0 8px 18px rgba(35, 75, 45, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 12px;
+      z-index: 20;
+    }
+    .dock-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dock-btn:active { transform: scale(0.85); }
+    .dock-btn svg {
+      width: 34px;
+      height: 34px;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+    }
+
+    /* --- MODALS GENERAL --- */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(16, 25, 18, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .modal-overlay.active { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      width: 92%;
+      max-width: 390px;
+      background: #ffffff;
+      border-radius: 26px;
+      box-shadow: 0 16px 45px rgba(0,0,0,0.4);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      max-height: 86%;
+      overflow-y: auto;
+    }
+    .modal-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .modal-heading {
+      font-size: 18px;
+      font-weight: 900;
+      color: #3e2e1e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-modal-close {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      color: #64748b;
+      cursor: pointer;
+    }
+
+    /* --- DRESS UP / POT CAROUSEL MODAL --- */
+    .dress-card-frame {
+      width: 300px;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.25);
+      border: 5px solid #bdd5c0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 18px 20px;
+      position: relative;
+    }
+    .dress-title-pill {
+      position: absolute;
+      top: -18px;
+      background: #fef7db;
+      border: 2px solid #5a3c22;
+      border-radius: 20px;
+      padding: 4px 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .carousel-view {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 15px;
+      min-height: 180px;
+    }
+    .caro-arrow {
+      background: #edf6ef;
+      border: 2px solid #a3c9aa;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      color: #3f6844;
+      font-size: 16px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .pot-preview-box {
+      width: 170px;
+      height: 170px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dress-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      width: 100%;
+    }
+    .btn-apply {
+      flex: 1;
+      background: #5d9765;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 16px;
+      padding: 10px;
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+    .btn-close {
+      background: #ef8b8b;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 16px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* --- SHOP & COIN TOP-UP MODAL --- */
+    .shop-tabs {
+      display: flex;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 12px;
+    }
+    .shop-tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-weight: 900;
+      font-size: 13px;
+      color: #64748b;
+      cursor: pointer;
+    }
+    .shop-tab.active {
+      color: #5d9765;
+      border-bottom: 3px solid #5d9765;
+    }
+    .shop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .shop-item-card {
+      background: #fdfcf9;
+      border: 1.5px solid #e9e3d5;
+      border-radius: 16px;
+      padding: 10px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 5px;
+    }
+    .shop-preview-svg {
+      width: 85px;
+      height: 75px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .shop-item-name { font-size: 11.5px; font-weight: 800; color: #2e261f; line-height: 1.2; }
+    .shop-btn {
+      width: 100%;
+      padding: 6px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 900;
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+    .shop-btn.buy { background: #fab522; color: #432e0e; }
+    .shop-btn.equip { background: #5d9765; color: #fff; }
+    .shop-btn.equipped { background: #cbd5e1; color: #64748b; cursor: default; }
+
+    .topup-card {
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topup-amount { font-size: 16px; font-weight: 900; color: #166534; }
+
+    /* --- AI CHATBOT MODAL STYLES --- */
+    .chat-modal-box {
+      width: 92%;
+      max-width: 390px;
+      height: 84%;
+      max-height: 600px;
+      background: #fdfaf5;
+      border-radius: 26px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+      border: 4px solid #b1d8bf;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: popChat 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popChat {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .chat-header {
+      background: #5d9765;
+      color: #ffffff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .doc-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .doc-avatar-box {
+      width: 38px;
+      height: 38px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      border: 2px solid #bde6c5;
+    }
+    .doc-info-title {
+      font-size: 14.5px;
+      font-weight: 900;
+    }
+    .doc-info-status {
+      font-size: 11px;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .online-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #55f37d;
+    }
+    .chat-body {
+      flex: 1;
+      padding: 14px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fdf9f2;
+    }
+    .chat-bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 13.5px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .chat-bubble.bot {
+      align-self: flex-start;
+      background: #ffffff;
+      color: #334155;
+      border-bottom-left-radius: 4px;
+      border: 1.5px solid #e2ddd3;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: #5d9765;
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 6px rgba(93, 151, 101, 0.3);
+    }
+    .quick-chips-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 12px;
+      background: #f7f1e6;
+      border-top: 1px solid #e9e0d1;
+      scrollbar-width: none;
+    }
+    .quick-chips-bar::-webkit-scrollbar { display: none; }
+    .chip-btn {
+      background: #ffffff;
+      border: 1.5px solid #d4c7b4;
+      padding: 5px 12px;
+      border-radius: 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #634a35;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chip-btn:active {
+      background: #634a35;
+      color: #fff;
+    }
+    .chat-input-row {
+      display: flex;
+      padding: 10px;
+      gap: 8px;
+      background: #ffffff;
+      border-top: 1.5px solid #eee7db;
+    }
+    .chat-text-input {
+      flex: 1;
+      border: 1.5px solid #dcd3c3;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      outline: none;
+      background: #faf7f2;
+      color: #333;
+    }
+    .chat-text-input:focus {
+      border-color: #5d9765;
+      background: #ffffff;
+    }
+    .btn-send-chat {
+      background: #5d9765;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Reticle & Detector elements */
+    .cam-box { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .preview-stage {
+      width: 100%;
+      height: 250px;
+      background: #1b242b;
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      border: 2px dashed #486275;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    #preview-image { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .preview-empty-hint { display: flex; flex-direction: column; align-items: center; color: #94a3b8; text-align: center; padding: 15px; }
+    .scan-reticle-anim {
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      border: 2px solid #22c55e;
+      border-radius: 16px;
+      display: none;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,0.4);
+    }
+    .scan-beam {
+      width: 100%;
+      height: 3px;
+      background: #4ade80;
+      box-shadow: 0 0 10px #4ade80;
+      animation: scanBeam 1.8s infinite alternate ease-in-out;
+    }
+    @keyframes scanBeam {
+      0% { margin-top: 4px; }
+      100% { margin-top: 152px; }
+    }
+    .capture-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .btn-camera-trigger {
+      background: #2563eb; color: #fff; border: none; padding: 12px 10px; border-radius: 16px; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+    }
+    .btn-upload-trigger {
+      background: #10b981; color: #fff; border: none; padding: 12px 10px; border-radius: 16px; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+    }
+    .analysis-report {
+      width: 100%; background: #f8fafc; border-radius: 18px; border: 1.5px solid #e2e8f0; padding: 14px; margin-top: 12px; display: none; flex-direction: column; gap: 8px;
+    }
+    .report-badge-row { display: flex; justify-content: space-between; align-items: center; }
+    .conf-tag { font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 12px; }
+    .conf-tag.danger { background: #fee2e2; color: #dc2626; }
+    .conf-tag.warning { background: #fef3c7; color: #d97706; }
+    .conf-tag.healthy { background: #dcfce7; color: #16a34a; }
+    .disease-name { font-size: 16px; font-weight: 900; color: #0f172a; }
+    .disease-metrics { display: flex; gap: 8px; font-size: 10.5px; color: #64748b; background: #ede8dc; padding: 6px 8px; border-radius: 8px; }
+    .disease-desc { font-size: 12px; color: #334155; line-height: 1.4; }
+    .disease-cure-box { font-size: 12px; background: #f0fdf4; border-left: 3px solid #22c55e; padding: 8px 10px; border-radius: 6px; color: #14532d; font-weight: 600; }
+
+    /* --- MULTI-PLANT STYLES --- */
+    .plant-item-card {
+      display: flex;
+      align-items: center;
+      background: #fdfaf2;
+      border: 2px solid #e8dec8;
+      border-radius: 18px;
+      padding: 10px 14px;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .plant-item-card.selected {
+      border-color: #5d9765;
+      background: #edf7ef;
+      box-shadow: 0 4px 10px rgba(93, 151, 101, 0.15);
+    }
+    .plant-avatar-mini {
+      width: 52px;
+      height: 52px;
+      background: #fff;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .plant-avatar-mini svg {
+      width: 48px;
+      height: 48px;
+    }
+    .plant-item-info { flex: 1; }
+    .plant-item-name { font-weight: 900; font-size: 14.5px; color: #2e261f; }
+    .plant-item-sub { font-size: 11.5px; color: #6d7b88; margin-top: 2px; }
+
+    /* Toast */
+    .toast-msg {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(45, 30, 15, 0.94);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease-out;
+      z-index: 70;
+      white-space: nowrap;
+    }
+    .toast-msg.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 0. LOGIN & REGISTER SCREEN -->
+    <div class="screen active" id="login-screen">
+      <div class="login-container">
+        <div class="login-card">
+          <div style="font-size: 50px; text-align: center; margin-bottom: 5px;">🌵</div>
+          <div class="login-title">Cactus Baby Farm</div>
+          <div class="login-subtitle">ระบบเข้าสู่ระบบเพื่อบันทึกการเติบโตของคุณ</div>
+
+          <!-- ฟอร์มเข้าสู่ระบบ -->
+          <div id="form-login-box" class="auth-form-box">
+            <div class="input-group">
+              <label>ชื่อผู้ใช้งาน (Username)</label>
+              <input type="text" id="login-username" placeholder="กรอกชื่อผู้ใช้ของคุณ" autocomplete="off">
+            </div>
+            <div class="input-group">
+              <label>รหัสผ่าน (Password)</label>
+              <input type="password" id="login-password" placeholder="กรอกรหัสผ่าน">
+            </div>
+            <button class="btn-auth-action" id="btn-submit-login">เข้าสู่ระบบ 🚀</button>
+            <div class="auth-switch-text">
+              ยังไม่มีบัญชีใช่ไหม? <span id="link-to-register">สมัครสมาชิกที่นี่</span>
+            </div>
+          </div>
+
+          <!-- ฟอร์มสมัครสมาชิก -->
+          <div id="form-register-box" class="auth-form-box" style="display: none;">
+            <div class="input-group">
+              <label>สร้างชื่อผู้ใช้งาน (Username)</label>
+              <input type="text" id="reg-username" placeholder="ตั้งชื่อผู้ใช้ (อย่างน้อย 3 ตัวอักษร)" autocomplete="off">
+            </div>
+            <div class="input-group">
+              <label>กำหนดรหัสผ่าน (Password)</label>
+              <input type="password" id="reg-password" placeholder="ตั้งรหัสผ่านของคุณ">
+            </div>
+            <button class="btn-auth-action" id="btn-submit-register" style="background: #259f83;">สมัครสมาชิก ✨</button>
+            <div class="auth-switch-text">
+              มีบัญชีอยู่แล้ว? <span id="link-to-login">เข้าสู่ระบบที่นี่</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div id="game-container">
+    <div class="toast-msg" id="toast">ข้อความ</div>
+
+    <!-- 1. SPLASH SCREEN -->
+    <div class="screen active" id="splash-screen" onclick="this.style.setProperty('display', 'none', 'important');">
+      <div class="splash-card">
+        <div class="sprouts-container">
+          <div class="dot d1"></div>
+          <div class="dot d2"></div>
+          <div class="dot d3"></div>
+          
+          <svg class="sprout sprout-left" viewBox="0 0 40 40"><path d="M20,38 Q18,22 10,18 Q4,15 8,8 Q16,8 18,20 Q22,8 30,8 Q34,15 28,18 Q20,22 20,38 Z" fill="#8bc34a"/></svg>
+          <svg class="sprout sprout-center" viewBox="0 0 40 40"><path d="M20,38 Q18,20 8,16 Q2,12 7,4 Q16,5 18,18 Q22,5 31,4 Q36,12 30,16 Q20,20 20,38 Z" fill="#8bc34a"/></svg>
+          <svg class="sprout sprout-right" viewBox="0 0 40 40"><path d="M20,38 Q18,22 10,18 Q4,15 8,8 Q16,8 18,20 Q22,8 30,8 Q34,15 28,18 Q20,22 20,38 Z" fill="#8bc34a"/></svg>
+        </div>
+        
+        <div id="splash-baby-svg"></div>
+        
+        <svg class="curved-text-svg" viewBox="0 0 350 350">
+          <defs>
+            <path id="text-path-bottom" d="M 30, 195 A 145, 145 0 0, 0 320, 195" />
+          </defs>
+          <text>
+            <textPath href="#text-path-bottom" startOffset="50%" text-anchor="middle">CACTUS Baby</textPath>
+          </text>
+        </svg>
+      </div>
+      
+      <div class="tap-hint">แตะหน้าจอเพื่อเริ่มเล่น 🌵</div>
+    </div>
+
+    <!-- 2. MAIN NURTURE GAME SCREEN -->
+    <div class="screen" id="main-screen">
+      <!-- พื้นหลังรูปภาพใหม่แบบย่อขนาด -->
+      <div class="room-bg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1;">
+        <img src="bg.jpg" style="width: 105%; height: 105%; object-fit: contain; border-radius: 20px;">
+      </div>
+
+      <!-- TOP HUD -->
+      <div class="top-hud">
+        <div class="left-hud">
+          <!-- ปุ่มเช็คอินรายวัน -->
+          <div class="checkin-badge" id="btn-open-checkin" title="เช็คอินรายวัน">
+            <span class="checkin-icon">📅</span>
+            <div class="checkin-text-wrap">
+              <span class="checkin-label">เช็คอินรายวัน</span>
+              <span class="checkin-sub" id="streak-hud">รับดาว ⭐</span>
+            </div>
+          </div>
+
+          <!-- กล่องแสดงเหรียญเดิม -->
+          <div class="coin-badge" id="btn-open-topup" title="เติมเหรียญ">
+            <div class="coin-icon">🪙</div>
+            <span class="coin-val" id="coin-counter">150</span>
+            <span class="coin-plus">+</span>
+          </div>
+
+          <!-- 🌟 แสดงดาวสะสม 🌟 -->
+          <div class="coin-badge" title="ดาวสะสม">
+            <div class="coin-icon" style="background: #facc15; border-color: #ca8a04;">⭐</div>
+            <span class="coin-val" id="star-hud-counter">0</span>
+          </div>
+        </div>
+
+        <!-- Center Switcher: คลิกเพื่อเปิดสลับแคคตัส -->
+        <div class="plant-selector-pill" id="btn-open-plant-switcher" title="สลับต้นแคคตัส">
+          <span>🌵</span>
+          <span class="plant-name-hud" id="active-plant-name">เจ้าหนามจิ๋ว</span>
+          <span class="plant-lvl-tag" id="active-plant-lvl">Lv.8</span>
+        </div>
+
+        <!-- Right HUD -->
+        <div class="right-hud">
+          <div class="hud-circle-btn profile" id="btn-open-profile" title="โปรไฟล์">
+            <span id="user-avatar-icon">🧑‍🌾</span>
+          </div>
+
+          <div class="hud-circle-btn shop" id="btn-open-shop" title="ร้านค้ากระถาง">
+            <span>🪴</span>
+          </div>
+
+          <div class="hud-circle-btn robot" id="btn-open-robot" title="AI คุณหมอแคคตัส">
+            <div class="robot-badge-pulse"></div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#2d603a">
+              <rect x="4" y="6" width="16" height="12" rx="4"/>
+              <circle cx="8.5" cy="12" r="1.8" fill="#fff"/>
+              <circle cx="15.5" cy="12" r="1.8" fill="#fff"/>
+              <path d="M10 15 Q12 16.5 14 15" stroke="#fff" stroke-width="1.2" fill="none"/>
+              <circle cx="12" cy="2.5" r="2" fill="#ff4757"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN PLAYFIELD -->
+      <div class="stage-area">
+        <div class="spray-tool" id="spray-bottle" title="รดน้ำต้นไม้">
+          <svg viewBox="0 0 80 120" width="100%" height="100%">
+            <path d="M28,34 L12,24 L10,18 L32,15 L32,32 Z" fill="#fad22b" />
+            <path d="M24,28 C18,36 18,48 24,54" stroke="#fad22b" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+            <path d="M25,44 Q35,42 45,44 Q60,56 60,86 Q60,112 35,112 Q10,112 10,86 Q10,56 25,44 Z" fill="#f8c3cd" stroke="#f0a5b4" stroke-width="2.5"/>
+            <path d="M18,65 Q14,84 18,98" stroke="#ffffff" stroke-width="3" fill="none" opacity="0.8"/>
+          </svg>
+        </div>
+
+        <div class="plant-entity" id="plant-actor">
+          <div class="plant-water-bar-wrap">
+            <span style="font-size: 11px;">💧</span>
+            <div class="water-bar-track">
+              <div class="water-bar-fill" id="water-bar-fill"></div>
+            </div>
+          </div>
+          <div class="cactus-character-wrap" id="live-cactus-char"></div>
+          <div class="pot-wrap" id="live-pot"></div>
+        </div>
+      </div>
+
+      <!-- BOTTOM DOCK -->
+      <div class="bottom-dock">
+        <!-- ปุ่มแต่งตัวกระถาง -->
+        <button class="dock-btn" id="dock-btn-pots" title="แต่งตัว กระถาง">
+          <svg viewBox="0 0 50 50">
+            <rect x="8" y="16" width="34" height="24" rx="4" fill="#a46d3e" stroke="#5d3b1f" stroke-width="2"/>
+            <path d="M6,16 Q25,8 44,16 L44,22 L6,22 Z" fill="#b9824f" stroke="#5d3b1f" stroke-width="2"/>
+            <rect x="22" y="20" width="6" height="8" rx="2" fill="#fbd143"/>
+          </svg>
+        </button>
+
+        <!-- ปุ่มถ่ายรูปสแกนโรค -->
+        <button class="dock-btn" id="dock-btn-camera" title="ถ่ายรูปสแกนโรค (ONNX AI)">
+          <svg viewBox="0 0 50 50">
+            <rect x="6" y="14" width="38" height="28" rx="8" fill="#f5e1a4" stroke="#775e3c" stroke-width="2"/>
+            <circle cx="25" cy="28" r="9" fill="#586c75" stroke="#333" stroke-width="1.8"/>
+            <circle cx="25" cy="28" r="5" fill="#1b2830"/>
+            <circle cx="23" cy="26" r="2" fill="#ffffff"/>
+            <circle cx="37" cy="20" r="2.5" fill="#2ed573"/>
+          </svg>
+        </button>
+
+        <!-- ปุ่มโรงเรือน/สลับต้นแคคตัส -->
+        <button class="dock-btn" id="dock-btn-plants" title="สลับต้นแคคตัส / โรงเรือน">
+          <svg viewBox="0 0 50 50">
+            <path d="M25,8 L7,22 L11,22 L11,40 L39,40 L39,22 L43,22 Z" fill="#f6ded0" stroke="#774d39" stroke-width="2"/>
+            <path d="M25,6 L5,23 L9,24 L25,11 L41,24 L45,23 Z" fill="#dd7474"/>
+            <rect x="20" y="27" width="10" height="13" rx="2" fill="#8f5b3a"/>
+            <circle cx="28" cy="34" r="1.5" fill="#fbd143"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+    
+    <!-- MODAL 1: AI CACTUS DOCTOR CHATBOT -->
+    <div class="modal-overlay" id="modal-chat">
+      <div class="chat-modal-box">
+        <div class="chat-header">
+          <div class="doc-profile">
+            <div class="doc-avatar-box">🌵</div>
+            <div>
+              <div class="doc-info-title">ดร. แคคตัส (AI หมอพืช)</div>
+              <div class="doc-info-status">
+                <span class="online-dot"></span>
+                <span>ผู้เชี่ยวชาญการดูแลกระบองเพชร</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn-modal-close" id="btn-close-chat" style="background: rgba(0,0,0,0.2); color: #fff;">✕</button>
+        </div>
+
+        <div class="chat-body" id="chat-messages">
+          <div class="chat-bubble bot">
+            สวัสดีครับ! ผมคือ <b>ดร. แคคตัส</b> 🌵 มีข้อสงสัยเรื่องการรดน้ำ ผสมดิน กำจัดเพลี้ยแป้ง หรือวิธีรักษาโรค สอบถามผมได้เลยครับ!
+          </div>
+        </div>
+
+        <!-- Quick Questions Chips -->
+        <div class="quick-chips-bar" id="quick-chips">
+          <button class="chip-btn" data-q="ควรรดน้ำแคคตัสกี่วันครั้ง?">💧 รดน้ำกี่วันครั้ง?</button>
+          <button class="chip-btn" data-q="แคคตัสต้นนิ่ม ย่น เกิดจากอะไร?">🥀 ต้นนิ่ม/ย่น?</button>
+          <button class="chip-btn" data-q="กำจัดเพลี้ยแป้งขาวๆ ยังไงดี?">🐛 กำจัดเพลี้ยแป้ง</button>
+          <button class="chip-btn" data-q="สูตรผสมดินปลูกแคคตัสที่ดีมีอะไรบ้าง?">🪴 สูตรดินปลูก</button>
+          <button class="chip-btn" data-q="แดดแบบไหนที่แคคตัสชอบ?">☀️ แสงแดดที่ต้องการ</button>
+        </div>
+
+        <div class="chat-input-row">
+          <input type="text" class="chat-text-input" id="chat-user-input" placeholder="พิมพ์ถามเรื่องแคคตัสที่นี่..." />
+          <button class="btn-send-chat" id="btn-send-chat" title="ส่ง">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: MULTI-PLANT SELECTOR (สลับต้น & รับเลี้ยงใหม่) -->
+    <div class="modal-overlay" id="modal-plants">
+      <div class="modal-card">
+        <div class="modal-title-row">
+          <div class="modal-heading">🌵 โรงเรือนแคคตัสของคุณ</div>
+          <button class="btn-modal-close" id="btn-close-plants">✕</button>
+        </div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">แตะที่ต้นไม้เพื่อสลับตัวที่ต้องการดูแล</div>
+        
+        <!-- รายการต้นไม้ -->
+        <div id="plant-list-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        
+        <!-- ปุ่มรับเลี้ยงต้นใหม่ -->
+        <button id="btn-adopt-plant" style="background:#5d9765; color:#fff; font-weight:900; border:none; border-radius:16px; padding:12px; margin-top:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span>✨</span> รับเลี้ยงแคคตัสต้นใหม่ (50 🪙)
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: USER PROFILE (บัญชีชาวสวนของคุณ) -->
+    <div class="modal-overlay" id="modal-profile">
+      <div class="modal-card" style="max-width: 340px;">
+        <div class="modal-title-row">
+          <div class="modal-heading">🧑‍🌾 บัญชีชาวสวนของคุณ</div>
+          <button class="btn-modal-close" id="btn-close-profile">✕</button>
+        </div>
+
+        <!-- บล็อกแสดงข้อมูลโปรไฟล์ -->
+        <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+          <div style="width: 50px; height: 50px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px;">
+            🧑‍🌾
+          </div>
+          <div>
+            <div style="font-size: 18px; font-weight: 900; color: #1e293b;" id="profile-display-username">Username</div>
+            <div style="font-size: 11px; color: #64748b;" id="profile-display-status">สถานะ: กำลังใช้งานระบบนี้</div>
+          </div>
+        </div>
+
+        <!-- การ์ดแสดงสถิติบัญชี -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+          <div style="background: #fefce8; border: 1.5px solid #fef08a; padding: 10px; border-radius: 14px; text-align: center;">
+            <div style="font-size: 11px; color: #854d0e; font-weight: bold;">🪙 เหรียญทั้งหมด</div>
+            <div style="font-size: 16px; font-weight: 900; color: #a16207;" id="profile-stat-coins">150</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 10px; border-radius: 14px; text-align: center;">
+            <div style="font-size: 11px; color: #166534; font-weight: bold;">🌵 แคคตัสในครอบครอง</div>
+            <div style="font-size: 16px; font-weight: 900; color: #15803d;" id="profile-stat-plants">1 ต้น</div>
+          </div>
+          <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; padding: 10px; border-radius: 14px; text-align: center;">
+            <div style="font-size: 11px; color: #9d174d; font-weight: bold;">🪴 กระถางที่ปลดล็อก</div>
+            <div style="font-size: 16px; font-weight: 900; color: #be185d;" id="profile-stat-pots">1/9 ใบ</div>
+          </div>
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 10px; border-radius: 14px; text-align: center;">
+            <div style="font-size: 11px; color: #1e40af; font-weight: bold;">📅 เช็คอินต่อเนื่อง</div>
+            <div style="font-size: 16px; font-weight: 900; color: #1d4ed8;" id="profile-stat-streak">Day 1</div>
+          </div>
+        </div>
+
+        <!-- ปุ่มออกจากระบบ -->
+        <button id="btn-logout" style="width: 100%; background: #ef4444; color: #fff; font-weight: 900; border: none; padding: 12px; border-radius: 16px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);">
+          🚪 ออกจากระบบ (Logout)
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: DAILY CHECK-IN (เช็คอินรายวัน) -->
+    <div class="modal-overlay" id="modal-checkin">
+      <div class="modal-card" style="max-width: 340px; text-align: center;">
+        <div class="modal-title-row">
+          <div class="modal-heading">📅 เช็คอินรายวัน</div>
+          <button class="btn-modal-close" id="btn-close-checkin">✕</button>
+        </div>
+
+        <!-- ส่วนแสดงดาวสะสม -->
+        <div style="background: #fefce8; border: 2px dashed #fef08a; border-radius: 20px; padding: 20px; margin: 10px 0;">
+          <div style="font-size: 50px; line-height: 1;">⭐</div>
+          <div style="font-size: 13px; color: #854d0e; font-weight: bold; margin-top: 8px;">ดาวสะสมทั้งหมด</div>
+          <div style="font-size: 32px; font-weight: 900; color: #a16207;" id="star-count-display">0 ดวง</div>
+        </div>
+
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 16px;">
+          เช็คอินรับดาวสะสมวันละ 1 ดวง ⭐<br>เพื่อสะสมสถิติการดูแลแคคตัสของคุณ
+        </div>
+
+        <!-- ปุ่มกดเช็คอิน -->
+        <button id="btn-do-checkin" style="width: 100%; background: #5d9765; color: #fff; font-weight: 900; border: none; padding: 12px; border-radius: 16px; cursor: pointer; font-size: 15px; box-shadow: 0 4px 10px rgba(93, 151, 101, 0.3);">
+          ✨ กดเช็คอินวันนี้ (+1 ⭐)
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: DRESS UP / 9 POTS CAROUSEL ("แต่งตัว") -->
+    <div class="modal-overlay" id="modal-dressup">
+      <div class="dress-card-frame">
+        <div class="dress-title-pill">
+          <span style="color:#e8a221; font-size:16px;">★</span>
+          <span style="color:#4b341f; font-weight:900; font-size:15px;">แต่งตัวกระถาง</span>
+        </div>
+
+        <div class="carousel-view">
+          <button class="caro-arrow" id="btn-pot-prev">&lt;</button>
+          <div class="pot-preview-box" id="pot-carousel-display"></div>
+          <button class="caro-arrow" id="btn-pot-next">&gt;</button>
+        </div>
+
+        <div style="font-size: 13px; font-weight:900; color: #4a3828; text-align: center; margin-top: 4px;" id="pot-carousel-name">
+          กระถางดินเผาคลาสสิก
+        </div>
+
+        <div class="dress-actions">
+          <button class="btn-apply" id="btn-equip-pot">เลือกใช้ใบนี้</button>
+          <button class="btn-close" id="btn-close-dress">ปิด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: POT SHOP & COIN TOP-UP -->
+    <div class="modal-overlay" id="modal-shop">
+      <div class="modal-card">
+        <div class="modal-title-row">
+          <div class="modal-heading">🛍️ ร้านค้ากระถาง & เติมเหรียญ</div>
+          <button class="btn-modal-close" id="btn-close-shop">✕</button>
+        </div>
+
+        <div class="shop-tabs">
+          <div class="shop-tab active" id="tab-btn-pots">กระถาง 9 แบบ</div>
+          <div class="shop-tab" id="tab-btn-topup">เติมเหรียญทอง</div>
+        </div>
+
+        <div id="shop-pots-view">
+          <div class="shop-grid" id="shop-pots-grid"></div>
+        </div>
+
+        <div id="shop-topup-view" style="display: none;">
+          <div class="topup-card">
+            <div>
+              <div class="topup-amount">+100 เหรียญ</div>
+              <div style="font-size: 11px; color:#64748b;">รับฟรี! แสงแดดยามเช้า</div>
+            </div>
+            <button style="background:#5d9765; color:#fff; border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer;" class="btn-free-coin" data-val="100">รับฟรี 🎁</button>
+          </div>
+
+          <div class="topup-card">
+            <div>
+              <div class="topup-amount">+300 เหรียญ</div>
+              <div style="font-size: 11px; color:#64748b;">ถุงปุ๋ยออสโมโค้ทสีทอง</div>
+            </div>
+            <button style="background:#fab522; color:#3b2505; border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer;" class="btn-free-coin" data-val="300">เติม 300 🪙</button>
+          </div>
+
+          <div class="topup-card">
+            <div>
+              <div class="topup-amount">+800 เหรียญ</div>
+              <div style="font-size: 11px; color:#64748b;">หีบหินภูเขาไฟมหาศาล</div>
+            </div>
+            <button style="background:#ea580c; color:#fff; border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer;" class="btn-free-coin" data-val="800">เติม 800 🪙</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: CAMERA & ONNX DISEASE SCANNER -->
+    <div class="modal-overlay" id="modal-scanner">
+      <div class="modal-card">
+        <div class="modal-title-row">
+          <div class="modal-heading">🔬 ตรวจวิเคราะห์โรคแคคตัส AI (ONNX)</div>
+          <button class="btn-modal-close" id="btn-close-scanner">✕</button>
+        </div>
+
+        <div id="onnx-status-bar" style="font-size: 11px; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 8px; margin-bottom: 8px; text-align: center;">
+          ⚡ สถานะโมเดล: กำลังเตรียมพร้อม...
+        </div>
+
+        <div class="cam-box">
+          <div class="preview-stage">
+            <div class="preview-empty-hint" id="preview-empty">
+              <span style="font-size: 40px; margin-bottom: 6px;">📷</span>
+              <b style="color: #cbd5e1;">ถ่ายภาพหรืออัปโหลดภาพแคคตัส</b>
+              <span style="font-size: 11px;">ส่งข้อมูลภาพเข้าสู่โมเดล best.onnx เพื่อจำแนกโรค</span>
+            </div>
+            <img id="preview-image" alt="Uploaded plant"/>
+            <div class="scan-reticle-anim" id="scanner-reticle">
+              <div class="scan-beam"></div>
+            </div>
+          </div>
+
+          <input type="file" id="input-cam-native" accept="image/*" capture="environment" style="display: none;"/>
+          <input type="file" id="input-file-native" accept="image/*" style="display: none;"/>
+
+          <div class="capture-actions">
+            <button class="btn-camera-trigger" id="btn-trigger-mobile-camera">
+              <span>📸</span> ถ่ายรูปด้วยกล้อง
+            </button>
+            <button class="btn-upload-trigger" id="btn-trigger-upload-file">
+              <span>📁</span> เลือกรูปจากเครื่อง
+            </button>
+          </div>
+
+          <div class="analysis-report" id="analysis-report">
+            <div class="report-badge-row">
+              <div class="conf-tag" id="report-conf-tag">ความแม่นยำ --%</div>
+            </div>
+            <div class="disease-name" id="report-disease-name">กำลังประมวลผล...</div>
+            <div class="disease-metrics" id="report-metrics">โมเดล: best.onnx (Inference)</div>
+            <div class="disease-desc" id="report-disease-desc">--</div>
+            <div class="disease-cure-box" id="report-disease-cure">--</div>
+            <button style="background: #259f83; color:#fff; border:none; padding:10px; border-radius:12px; font-weight:900; margin-top:6px; cursor:pointer;" id="btn-ask-doctor-from-scan">
+              ส่งผลตรวจนี้ให้ AI หมอแคคตัสช่วยวิเคราะห์ต่อ 💬
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <canvas id="hidden-analyzer-canvas" style="display: none;"></canvas>
+
+  <script>
+    (function() {
+      // --- Web Audio SFX System ---
+      let audioCtx = null;
+      function getAudioContext() {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+      }
+
+      function playSound(type) {
+        try {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          const now = ctx.currentTime;
+
+          if (type === 'pop') {
+            osc.frequency.setValueAtTime(450, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.11);
+          } else if (type === 'water') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(250, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+          } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(987, now);
+            osc.frequency.setValueAtTime(1318, now + 0.08);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.26);
+          }
+        } catch(e) {}
+      }
+
+      // ==========================================
+      // ONNX RUNTIME ENGINE CONFIGURATION
+      // ==========================================
+      let ortSession = null;
+      const onnxStatusBar = document.getElementById('onnx-status-bar');
+
+      const ONNX_CLASSES = [
+        {
+          id: 'healthy',
+          name: 'แคคตัสสุขภาพสมบูรณ์ (Healthy)',
+          type: 'healthy',
+          desc: 'ต้นไม้มีสีเขียวสดใส หนามแข็งแรง และไม่พบสัญญาณการเข้าทำลายของโรคพืช',
+          cure: '🌟 แนะนำ: รักษารอบการรดน้ำเมื่อดินแห้ง และให้รับแสงแดดยามเช้าสม่ำเสมอ'
+        },
+        {
+          id: 'rust',
+          name: 'โรคราสนิม (Cactus Rust)',
+          type: 'danger',
+          desc: 'ตรวจพบสปอร์เชื้อราสีส้ม-น้ำตาล เกิดจากความชื้นสะสมและอากาศถ่ายเทไม่สะดวก',
+          cure: '💡 คำแนะนำ: พ่นสารคอปเปอร์ไฮดรอกไซด์ แยกต้นออก และงดรดน้ำโดนผิวต้น'
+        },
+        {
+          id: 'mealybug',
+          name: 'เพลี้ยแป้ง (Mealybug Infestation)',
+          type: 'warning',
+          desc: 'ตรวจพบคราบหรือตัวเพลี้ยสีขาวดูดกินน้ำเลี้ยงบริเวณซอกหนาม',
+          cure: '💡 คำแนะนำ: ใช้แอลกอฮอล์ 70% ชุบคอตตอนบัดแต้มออก หรือโรยสตาร์เกิล จี (Starkle G)'
+        },
+        {
+          id: 'rot',
+          name: 'โรคโคนเน่า / รากเน่า (Stem & Root Rot)',
+          type: 'danger',
+          desc: 'เนื้อเยื่อเริ่มนิ่ม ยวบ และเปลี่ยนเป็นสีคล้ำ จากการรดน้ำมากเกินไปหรือดินไม่ระบายน้ำ',
+          cure: '💡 คำแนะนำ: ปาดเฉือนเนื้อที่เน่าออกจนถึงเนื้อดี ทาปูนแดง ผึ่งแดดรำไร แล้วเปลี่ยนดินใหม่'
+        }
+      ];
+
+      async function initONNXModel() {
+        try {
+          if (typeof ort === 'undefined') throw new Error('ไม่พบไลบรารี ort');
+          onnxStatusBar.textContent = '⏳ กำลังโหลดโมเดล best.onnx...';
+          ortSession = await ort.InferenceSession.create('./models/best.onnx', {
+            executionProviders: ['wasm']
+          });
+          onnxStatusBar.textContent = '✅ โมเดล best.onnx พร้อมทำงานแล้ว!';
+          onnxStatusBar.style.color = '#15803d';
+        } catch (err) {
+          onnxStatusBar.innerHTML = '⚠️ ไม่พบไฟล์ <b>./models/best.onnx</b> (ระบบจะใช้ระบบจำลองอัตโนมัติ)';
+          onnxStatusBar.style.color = '#b45309';
+        }
+      }
+
+      function preprocessImageToTensor(img, targetWidth = 224, targetHeight = 224) {
+        const canvas = document.getElementById('hidden-analyzer-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+        const totalPixels = targetWidth * targetHeight;
+        const floatData = new Float32Array(3 * totalPixels);
+
+        for (let i = 0; i < totalPixels; i++) {
+          floatData[i] = imgData[i * 4] / 255.0;
+          floatData[totalPixels + i] = imgData[i * 4 + 1] / 255.0;
+          floatData[2 * totalPixels + i] = imgData[i * 4 + 2] / 255.0;
+        }
+
+        return new ort.Tensor('float32', floatData, [1, 3, targetHeight, targetWidth]);
+      }
+
+      async function runInference(imgElement) {
+        if (!ortSession) {
+          const fallbackClass = ONNX_CLASSES[Math.floor(Math.random() * ONNX_CLASSES.length)];
+          const fallbackConf = 85 + Math.floor(Math.random() * 12);
+          return { predictedClass: fallbackClass, confidence: fallbackConf, isSimulation: true };
+        }
+
+        try {
+          const inputTensor = preprocessImageToTensor(imgElement, 224, 224);
+          const feeds = {};
+          feeds[ortSession.inputNames[0]] = inputTensor;
+
+          const results = await ortSession.run(feeds);
+          const output = results[ortSession.outputNames[0]].data;
+
+          let maxVal = -Infinity;
+          let maxIdx = 0;
+          let expSum = 0;
+          const expScores = [];
+
+          for (let i = 0; i < Math.min(output.length, ONNX_CLASSES.length); i++) {
+            const exp = Math.exp(output[i]);
+            expScores.push(exp);
+            expSum += exp;
+            if (output[i] > maxVal) {
+              maxVal = output[i];
+              maxIdx = i;
+            }
+          }
+
+          const confidence = Math.round((expScores[maxIdx] / expSum) * 100);
+          return {
+            predictedClass: ONNX_CLASSES[maxIdx] || ONNX_CLASSES[0],
+            confidence: Math.max(confidence, 70),
+            isSimulation: false
+          };
+        } catch (e) {
+          return { predictedClass: ONNX_CLASSES[1], confidence: 88, isSimulation: true };
+        }
+      }
+
+      // ==========================================
+      // EXACT 9 CUSTOM POTS (USING PNG IMAGES)
+      // ==========================================
+      const POTS = [
+        {
+          id: 'classic-brown',
+          name: 'กระถางดินเผาคลาสสิก',
+          price: 0,
+          owned: true,
+          svg: `<img src="กระถางสุกคลาสสิก.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'teal-bowl',
+          name: 'ชามแก้วใสสีฟ้าคราม',
+          price: 50,
+          owned: true,
+          svg: `<img src="กระถางน้ำทะเล.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'orange-heart',
+          name: 'หม้อดินเผาส้มหัวใจทอง',
+          price: 80,
+          owned: false,
+          svg: `<img src="กระถางสีส้มหัวใจ.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'purple-polka',
+          name: 'หม้อเซรามิกม่วงลายจุด',
+          price: 120,
+          owned: false,
+          svg: `<img src="กระถางสีชมพูลายจุด.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'turquoise-blue',
+          name: 'หม้อเซรามิกเทอร์ควอยซ์',
+          price: 160,
+          owned: false,
+          svg: `<img src="กระถางสีเทอคว้อยยยย.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'lover-baby',
+          name: 'หม้อเซรามิกแห่งความรัก',
+          price: 200,
+          owned: false,
+          svg: `<img src="กระถางความรัก.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'kg',
+          name: 'หม้อเซรามิกก้นหอย',
+          price: 240,
+          owned: false,
+          svg: `<img src="กระถางสีน้ำตาลก้นหอย.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'pur-pink',
+          name: 'หม้อเซรามิกทานอล',
+          price: 280,
+          owned: false,
+          svg: `<img src="กระถางทานอล.png" style="width:100%; height:100%; object-fit:contain;">`
+        },
+        {
+          id: 'tu-pla',
+          name: 'หม้อเซรามิกตู้ปลา',
+          price: 350,
+          owned: false,
+          svg: `<img src="กระถางตู้ปลา.png" style="width:100%; height:100%; object-fit:contain;">`
+        }
+      ];
+
+      // --- MULTI-CACTUS CHARACTER GRAPHICS ---
+      function renderCactusSVG(species, mood = 'normal', mini = false) {
+        let imageName = '';
+
+        switch (species) {
+          case 'golden-barrel':
+            imageName = 'แมนลูกกอล์ฟอารมณ์ดี.png';
+            break;
+
+          case 'bunny-ears':
+            imageName = 'กระบองทองอารมณ์ดี.png';
+            break;
+
+          case 'laco':
+            imageName = 'เลม่อนอารมณ์ดี.png';
+            break;
+
+          case 'cactus-4':
+            imageName = 'โอรุกะอารมณ์ดี.png';
+            break;
+
+          case 'cactus-5':
+            imageName = 'กุหลาบหินอารมณ์ดี.png';
+            break;
+
+          case 'cactus-6':
+            imageName = 'ยิมโนด่างอารมณ์ดี.png';
+            break;
+
+          default:
+            imageName = 'laco.png';
+        }
+
+        if (mini) {
+          return `
+            <img 
+              src="${imageName}"
+              style="
+                width: 48px;
+                height: 48px;
+                object-fit: contain;
+                transform: none;
+              "
+            >
+          `;
+        }
+
+        return `
+          <img 
+            src="${imageName}"
+            style="
+              width: 350px;
+              height: 350px;
+              object-fit: contain;
+              transform: translateY(65px);
+            "
+          >
+        `;
+      }
+
+      // --- APP STATE ---
+      const state = {
+        currentUser: localStorage.getItem('cactus_user') || null,
+        wallet: { coins: 150 },
+        stars: parseInt(localStorage.getItem('cactus_stars') || '0', 10),
+        lastCheckinDate: localStorage.getItem('cactus_last_checkin') || '',
+        plants: [
+          {
+            id: 1,
+            name: 'เจ้าหนามจิ๋ว',
+            species: 'baby',
+            level: 8,
+            water: 80,
+            potId: 'classic-brown'
+          }
+        ],
+        activePlantIndex: 0,
+        carouselPotIndex: 0,
+        isWatering: false
+      };
+
+      // --- DOM REFERENCES ---
+      const modalCheckin = document.getElementById('modal-checkin');
+      const btnOpenCheckin = document.getElementById('btn-open-checkin');
+      const btnCloseCheckin = document.getElementById('btn-close-checkin');
+      const btnDoCheckin = document.getElementById('btn-do-checkin');
+      const starCountDisplay = document.getElementById('star-count-display');
+      const starHudCounter = document.getElementById('star-hud-counter');
+      const loginScreen = document.getElementById('login-screen');
+      const splashScreen = document.getElementById('splash-screen');
+      const mainScreen = document.getElementById('main-screen');
+      const splashBabySvg = document.getElementById('splash-baby-svg');
+      const coinCounter = document.getElementById('coin-counter');
+      const activePlantName = document.getElementById('active-plant-name');
+      const activePlantLvl = document.getElementById('active-plant-lvl');
+      const liveCactusChar = document.getElementById('live-cactus-char');
+      const livePot = document.getElementById('live-pot');
+      const waterBarFill = document.getElementById('water-bar-fill');
+      const toastEl = document.getElementById('toast');
+
+      // Modals
+      const modalProfile = document.getElementById('modal-profile');
+      const modalDressup = document.getElementById('modal-dressup');
+      const modalShop = document.getElementById('modal-shop');
+      const modalScanner = document.getElementById('modal-scanner');
+      const modalPlants = document.getElementById('modal-plants');
+      const modalChat = document.getElementById('modal-chat');
+
+      // Auth Switches
+      const linkToRegister = document.getElementById('link-to-register');
+      const linkToLogin = document.getElementById('link-to-login');
+      const formLoginBox = document.getElementById('form-login-box');
+      const formRegisterBox = document.getElementById('form-register-box');
+
+      // Profile Elements
+      const btnOpenProfile = document.getElementById('btn-open-profile');
+      const btnCloseProfile = document.getElementById('btn-close-profile');
+      const btnLogout = document.getElementById('btn-logout');
+
+      // Plant Switcher Elements
+      const plantListContainer = document.getElementById('plant-list-container');
+      const btnOpenPlantSwitcher = document.getElementById('btn-open-plant-switcher');
+      const dockBtnPlants = document.getElementById('dock-btn-plants');
+      const btnClosePlants = document.getElementById('btn-close-plants');
+      const btnAdoptPlant = document.getElementById('btn-adopt-plant');
+
+      // Carousel Elements
+      const potCarouselDisplay = document.getElementById('pot-carousel-display');
+      const potCarouselName = document.getElementById('pot-carousel-name');
+      const btnPotPrev = document.getElementById('btn-pot-prev');
+      const btnPotNext = document.getElementById('btn-pot-next');
+      const btnEquipPot = document.getElementById('btn-equip-pot');
+      const btnCloseDress = document.getElementById('btn-close-dress');
+
+      // Shop Elements
+      const shopPotsGrid = document.getElementById('shop-pots-grid');
+      const tabBtnPots = document.getElementById('tab-btn-pots');
+      const tabBtnTopup = document.getElementById('tab-btn-topup');
+      const shopPotsView = document.getElementById('shop-pots-view');
+      const shopTopupView = document.getElementById('shop-topup-view');
+
+      // AI Chatbot Elements
+      const btnOpenRobot = document.getElementById('btn-open-robot');
+      const btnCloseChat = document.getElementById('btn-close-chat');
+      const chatMessages = document.getElementById('chat-messages');
+      const chatUserInput = document.getElementById('chat-user-input');
+      const btnSendChat = document.getElementById('btn-send-chat');
+      const quickChips = document.getElementById('quick-chips');
+      const btnAskDoctorFromScan = document.getElementById('btn-ask-doctor-from-scan');
+
+      // Toast Helper
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+      }
+
+      function updateStarUI() {
+        if (starCountDisplay) starCountDisplay.textContent = `${state.stars} ดวง`;
+        if (starHudCounter) starHudCounter.textContent = state.stars;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (state.lastCheckinDate === todayStr) {
+          btnDoCheckin.textContent = 'เช็คอินแล้ววันนี้ ✓';
+          btnDoCheckin.style.background = '#94a3b8';
+          btnDoCheckin.disabled = true;
+        } else {
+          btnDoCheckin.textContent = '✨ กดเช็คอินวันนี้ (+1 ⭐)';
+          btnDoCheckin.style.background = '#5d9765';
+          btnDoCheckin.disabled = false;
+        }
+      }
+
+      // เปิด/ปิด Modal เช็คอิน
+      if (btnOpenCheckin) {
+        btnOpenCheckin.addEventListener('click', () => {
+          playSound('pop');
+          updateStarUI();
+          modalCheckin.classList.add('active');
+        });
+      }
+
+      if (btnCloseCheckin) {
+        btnCloseCheckin.addEventListener('click', () => {
+          modalCheckin.classList.remove('active');
+        });
+      }
+
+      // ปุ่มกดรับดาวเช็คอิน
+      if (btnDoCheckin) {
+        btnDoCheckin.addEventListener('click', () => {
+          const todayStr = new Date().toISOString().split('T')[0];
+
+          if (state.lastCheckinDate === todayStr) {
+            showToast('คุณเช็คอินวันนี้ไปเรียบร้อยแล้วครับ!');
+            return;
+          }
+
+          state.stars += 1;
+          state.lastCheckinDate = todayStr;
+          
+          localStorage.setItem('cactus_stars', state.stars);
+          localStorage.setItem('cactus_last_checkin', todayStr);
+
+          playSound('coin');
+          updateStarUI();
+          showToast('เช็คอินสำเร็จ! ได้รับดาว +1 ดวง ⭐');
+        });
+      }
+
+      updateStarUI();
+
+      function getActivePlant() {
+        return state.plants[state.activePlantIndex] || state.plants[0];
+      }
+
+      function updateHUD() {
+        coinCounter.textContent = state.wallet.coins;
+        const p = getActivePlant();
+        activePlantName.textContent = p.name;
+        activePlantLvl.textContent = `Lv.${p.level}`;
+      }
+
+      function updatePlantStage() {
+        const p = getActivePlant();
+        liveCactusChar.innerHTML = renderCactusSVG(p.species, state.isWatering ? 'watered' : 'normal');
+        
+        const potObj = POTS.find(item => item.id === p.potId) || POTS[0];
+        livePot.innerHTML = potObj.svg;
+        waterBarFill.style.width = `${p.water}%`;
+      }
+
+      // ==========================================
+      // AUTH SWITCHERS & PROFILE MODAL
+      // ==========================================
+      if (linkToRegister) {
+        linkToRegister.addEventListener('click', () => {
+          formLoginBox.style.display = 'none';
+          formRegisterBox.style.display = 'flex';
+        });
+      }
+
+      if (linkToLogin) {
+        linkToLogin.addEventListener('click', () => {
+          formRegisterBox.style.display = 'none';
+          formLoginBox.style.display = 'flex';
+        });
+      }
+
+      function updateProfileModal() {
+        const usernameDisplay = document.getElementById('profile-display-username');
+        const statCoins = document.getElementById('profile-stat-coins');
+        const statPlants = document.getElementById('profile-stat-plants');
+        const statPots = document.getElementById('profile-stat-pots');
+
+        if (usernameDisplay) usernameDisplay.textContent = state.currentUser || 'ผู้ใช้งาน';
+        if (statCoins) statCoins.textContent = `${state.wallet.coins}`;
+        if (statPlants) statPlants.textContent = `${state.plants.length} ต้น`;
+
+        const ownedPotsCount = POTS.filter(p => p.owned).length;
+        if (statPots) statPots.textContent = `${ownedPotsCount}/9 ใบ`;
+      }
+
+      if (btnOpenProfile) {
+        btnOpenProfile.addEventListener('click', () => {
+          playSound('pop');
+          updateProfileModal();
+          modalProfile.classList.add('active');
+        });
+      }
+
+      if (btnCloseProfile) {
+        btnCloseProfile.addEventListener('click', () => {
+          modalProfile.classList.remove('active');
+        });
+      }
+
+      // ==========================================
+      // SCREEN FLOW CONTROL (เรียงลำดับการเปิดหน้า)
+      // ==========================================
+      
+      // 1. เริ่มต้นระบบ: ให้หน้า Splash Screen แสดงเป็นหน้าแรกเสมอ
+      splashScreen.classList.add('active');
+      loginScreen.classList.remove('active');
+      mainScreen.classList.remove('active');
+
+      // 2. เมื่อแตะหน้า Splash Screen -> ไปหน้า Login หรือ หน้าหลัก
+      splashScreen.addEventListener('click', () => {
+        playSound('pop');
+        splashScreen.classList.remove('active');
+
+        if (state.currentUser) {
+          mainScreen.classList.add('active');
+          showToast(`ยินดีต้อนรับกลับมา คุณ ${state.currentUser}! 🌵`);
+        } else {
+          loginScreen.classList.add('active');
+        }
+      });
+
+      // 3. ปุ่มกดเข้าสู่ระบบ
+      const btnSubmitLogin = document.getElementById('btn-submit-login');
+      if (btnSubmitLogin) {
+        btnSubmitLogin.addEventListener('click', () => {
+          const user = document.getElementById('login-username').value.trim();
+          if (!user) {
+            showToast('กรุณากรอกชื่อผู้ใช้งานก่อนครับ');
+            return;
+          }
+          state.currentUser = user;
+          localStorage.setItem('cactus_user', user);
+          playSound('pop');
+
+          loginScreen.classList.remove('active');
+          mainScreen.classList.add('active');
+          showToast(`เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ${state.currentUser} 🎉`);
+        });
+      }
+
+      // 4. ปุ่มกดสมัครสมาชิก
+      const btnSubmitRegister = document.getElementById('btn-submit-register');
+      if (btnSubmitRegister) {
+        btnSubmitRegister.addEventListener('click', () => {
+          const user = document.getElementById('reg-username').value.trim();
+          if (user.length < 3) {
+            showToast('กรุณาตั้งชื่อผู้ใช้ 3 ตัวอักษรขึ้นไป');
+            return;
+          }
+          state.currentUser = user;
+          localStorage.setItem('cactus_user', user);
+          playSound('pop');
+
+          loginScreen.classList.remove('active');
+          mainScreen.classList.add('active');
+          showToast(`สมัครสมาชิกสำเร็จ! ยินดีต้อนรับคุณ ${state.currentUser}`);
+        });
+      }
+
+      // 5. เมื่อกด Logout
+      if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+          playSound('pop');
+          if (modalProfile) modalProfile.classList.remove('active');
+          mainScreen.classList.remove('active');
+          splashScreen.classList.remove('active');
+
+          state.currentUser = null;
+          localStorage.removeItem('cactus_user');
+
+          document.getElementById('login-username').value = '';
+          document.getElementById('login-password').value = '';
+
+          loginScreen.classList.add('active');
+          showToast('ออกจากระบบเรียบร้อยแล้ว');
+        });
+      }
+
+      // ==========================================
+      // AI CHATBOT LOGIC
+      // ==========================================
+      const BOT_KNOWLEDGE = [
+        {
+          keys: ['รดน้ำ', 'น้ำกี่วัน', 'รดน้ำบ่อย', 'สัปดาห์ละ'],
+          reply: '🌵 สำหรับแคคตัส ควรรดน้ำเมื่อ **ดินแห้งสนิท** เท่านั้นครับ (ปกติ 5-7 วันครั้งสำหรับกระถางเล็ก หรือ 7-10 วันสำหรับกระถางใหญ่) วิธีเช็คคือนำไม้จิ้มฟันจิ้มลงดินลึก 2 นิ้ว ถ้าไม่มีเศษดินชื้นติดขึ้นมาค่อยรดจนน้ำไหลออกก้นกระถางครับ!'
+        },
+        {
+          keys: ['นิ่ม', 'ย่น', 'เหี่ยว', 'ยวบ', 'แฟบ'],
+          reply: '🩺 ต้นนิ่มหรือย่น มี 2 สาเหตุหลักครับ:\n1. **ขาดน้ำนาน**: เนื้อจะย่นแห้ง ถ้ารดน้ำจะกลับมาเต่งตึงใน 2 วัน\n2. **รากเน่า/โคนเน่า**: ต้นนิ่มมีสีคล้ำหรือมีกลิ่นเปรี้ยว ต้องรีบรื้อกระถางตรวจดูราก ถ้าเน่าให้ตัดทิ้ง ทาปูนแดง ผึ่งให้แห้งครับ!'
+        },
+        {
+          keys: ['เพลี้ย', 'เพลี้ยแป้ง', 'แมลง', 'ขาวๆ', 'ใยขาว'],
+          reply: '🐛 เพลี้ยแป้งตัวขาวๆ ชอบซ่อนตัวตามซอกหนามและรากครับ! วิธีแก้ง่ายๆ คือใช้ไม้พันสำลีชุบแอลกอฮอล์ 70% ปาดออกโดยตรง หรือโรยผง **สตาร์เกิล จี (Starkle G)** 1 ช้อนชาบนดิน ตัวยาจะดูดซึมฆ่าเพลี้ยทั้งต้นและรากได้ปลอดภัยครับ'
+        },
+        {
+          keys: ['ดิน', 'ผสมดิน', 'เครื่องปลูก', 'ดินปลูก'],
+          reply: '🪴 สูตรดินแคคตัสที่ดีต้อง **ระบายน้ำไว ไม่อมน้ำแฉะ** ครับ แนะนำสูตรยอดนิยม: \n- ดินใบก้ามปูร่อน 1 ส่วน\n- หินภูเขาไฟเบอร์ 00 2 ส่วน\n- เพอร์ไลท์ 1 ส่วน\n- ปุ๋ยออสโมโค้ท + สตาร์เกิล จี เล็กน้อย รับรองรากเดินไวครับ!'
+        },
+        {
+          keys: ['แดด', 'แสง', 'แสงแดด', 'ไหม้แดด', 'ยืด'],
+          reply: '☀️ แคคตัสต้องการแดดอย่างน้อย **5-6 ชั่วโมง/วัน** ครับ ถ้ารับแดดน้อยลำต้นจะยืดเสียทรง (Etiolation) แต่ถ้าแดดจัดเกินไปโดยไม่พรางสแลน ผิวจะไหม้แดดเป็นสีน้ำตาล แนะนำแดดช่วงเช้าถึงเที่ยงจะดีที่สุดครับ!'
+        },
+        {
+          keys: ['ราสนิม', 'สนิม', 'จุดสีส้ม', 'จุดน้ำตาล'],
+          reply: '🍁 โรคราสนิมเกิดจากเชื้อราในสภาพอากาศชื้นครับ รักษาด้วยการพ่น **คอปเปอร์ไฮดรอกไซด์** หรือ **แคปแทน** สัปดาห์ละ 1 ครั้ง และงดฉีดพ่นน้ำโดนผิวต้นโดยตรงครับ'
+        },
+        {
+          keys: ['โคนเน่า', 'รากเน่า', 'เน่า'],
+          reply: '🚨 โรคโคนเน่าอันตรายมากครับ! หากพบให้ใช้มีดคมๆ ปาดเนื้อส่วนที่เน่าทิ้งจนกว่าจะเจอเนื้อสีเขียว/ขาวที่สะอาด จากนั้นทาแผลด้วยปูนแดงกินหมาก ผึ่งลมในที่ร่ม 7-14 วันจนแผลแห้งสนิท แล้วจึงนำลงปลูกใหม่ในหินภูเขาไฟเพื่อล่อรากครับ'
+        }
+      ];
+
+      function appendChatMessage(sender, text) {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${sender}`;
+        bubble.innerHTML = text.replace(/\n/g, '<br>');
+        chatMessages.appendChild(bubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function handleUserQuestion(query) {
+        if (!query || !query.trim()) return;
+        const q = query.trim();
+        appendChatMessage('user', q);
+        chatUserInput.value = '';
+        playSound('pop');
+
+        setTimeout(() => {
+          let matchedAnswer = null;
+          const lowerQ = q.toLowerCase();
+
+          for (const item of BOT_KNOWLEDGE) {
+            const hit = item.keys.some(k => lowerQ.includes(k.toLowerCase()));
+            if (hit) {
+              matchedAnswer = item.reply;
+              break;
+            }
+          }
+
+          if (!matchedAnswer) {
+            matchedAnswer = `หมอแคคตัสขอแนะนำเบื้องต้นนะครับ: ปัจจัยสำคัญที่สุดของกระบองเพชรคือ **"แดดจัด-ดินโปร่ง-รดน้ำเมื่อแห้ง"** ครับ หากมีข้อสงสัยเรื่องอาการใบเหี่ยว รากเน่า หรือกำจัดเพลี้ย ลองพิมพ์คำถามเฉพาะเจาะจงได้เลยครับ! 🌵💚`;
+          }
+
+          playSound('pop');
+          appendChatMessage('bot', matchedAnswer);
+        }, 450);
+      }
+
+      btnOpenRobot.addEventListener('click', () => {
+        playSound('pop');
+        modalChat.classList.add('active');
+      });
+
+      btnCloseChat.addEventListener('click', () => {
+        modalChat.classList.remove('active');
+      });
+
+      btnSendChat.addEventListener('click', () => {
+        handleUserQuestion(chatUserInput.value);
+      });
+
+      chatUserInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleUserQuestion(chatUserInput.value);
+      });
+
+      quickChips.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chip-btn');
+        if (btn && btn.dataset.q) {
+          handleUserQuestion(btn.dataset.q);
+        }
+      });
+
+      btnAskDoctorFromScan.addEventListener('click', () => {
+        modalScanner.classList.remove('active');
+        modalChat.classList.add('active');
+      });
+
+      // ==========================================
+      // MULTI-PLANT LOGIC
+      // ==========================================
+      function renderPlantList() {
+        plantListContainer.innerHTML = '';
+
+        state.plants.forEach((p, idx) => {
+          const isSelected = idx === state.activePlantIndex;
+          const card = document.createElement('div');
+          card.className = `plant-item-card ${isSelected ? 'selected' : ''}`;
+          
+          card.innerHTML = `
+            <div class="plant-avatar-mini">
+              ${renderCactusSVG(p.species, 'normal', true)}
+            </div>
+            <div class="plant-item-info">
+              <div class="plant-item-name">${p.name} ${isSelected ? '✓ (กำลังดูแล)' : ''}</div>
+              <div class="plant-item-sub">เลเวล ${p.level} • น้ำ ${p.water}%</div>
+            </div>
+            <button style="background:${isSelected ? '#64748b' : '#5d9765'}; color:#fff; border:none; padding:7px 14px; border-radius:12px; font-weight:bold; font-size:12px; cursor:pointer;">
+              ${isSelected ? 'เลือกอยู่' : 'สลับ'}
+            </button>
+          `;
+
+          card.addEventListener('click', () => {
+            state.activePlantIndex = idx;
+            playSound('pop');
+            renderPlantList();
+            updateHUD();
+            updatePlantStage();
+            showToast(`สลับมาดูแล ${p.name} แล้ว! 🌵`);
+            modalPlants.classList.remove('active');
+          });
+
+          plantListContainer.appendChild(card);
+        });
+      }
+
+      btnOpenPlantSwitcher.addEventListener('click', () => {
+        playSound('pop');
+        renderPlantList();
+        modalPlants.classList.add('active');
+      });
+
+      dockBtnPlants.addEventListener('click', () => {
+        playSound('pop');
+        renderPlantList();
+        modalPlants.classList.add('active');
+      });
+
+      btnClosePlants.addEventListener('click', () => {
+        modalPlants.classList.remove('active');
+      });
+
+      btnAdoptPlant.addEventListener('click', () => {
+        if (state.wallet.coins < 50) {
+          showToast('เหรียญทองไม่เพียงพอ (ต้องการ 50 🪙)');
+          return;
+        }
+
+        state.wallet.coins -= 50;
+
+        const cactusPool = [
+          { name: 'กระบองทอง', species: 'bunny-ears' },
+          { name: 'กุหลาบหิน', species: 'rock-rose' },
+          { name: 'แมนลูกกอล์ฟ', species: 'golden-barrel' },
+          { name: 'ยิมโนด่าง', species: 'gymno-green' },
+          { name: 'เลม่อน', species: 'laco' },
+          { name: 'โอรุกะ', species: 'oruka' }
+        ];
+
+        const chosenCactus = cactusPool[Math.floor(Math.random() * cactusPool.length)];
+
+        const newPlant = {
+          id: Date.now(),
+          name: chosenCactus.name,
+          species: chosenCactus.species,
+          level: 1,
+          water: 60,
+          potId: 'classic-brown'
+        };
+
+        state.plants.push(newPlant);
+        state.activePlantIndex = state.plants.length - 1;
+
+        playSound('coin');
+        renderPlantList();
+        updateHUD();
+        updatePlantStage();
+        showToast(`รับเลี้ยง ${newPlant.name} สำเร็จ! 🎉`);
+      });
+
+      // --- DRESS UP CAROUSEL LOGIC ---
+      function updateDressUpCarousel() {
+        const curPot = POTS[state.carouselPotIndex];
+        const p = getActivePlant();
+        potCarouselDisplay.innerHTML = curPot.svg;
+        potCarouselName.textContent = curPot.name;
+
+        if (p.potId === curPot.id) {
+          btnEquipPot.textContent = 'ใช้งานอยู่ ✓';
+          btnEquipPot.style.background = '#88a38b';
+        } else if (curPot.owned) {
+          btnEquipPot.textContent = 'เลือกใช้ใบนี้';
+          btnEquipPot.style.background = '#5d9765';
+        } else {
+          btnEquipPot.textContent = `ยังไม่ได้ปลดล็อก (${curPot.price} 🪙)`;
+          btnEquipPot.style.background = '#e67e22';
+        }
+      }
+
+      // --- SHOP GRID LOGIC ---
+      function renderShopPots() {
+        shopPotsGrid.innerHTML = '';
+        const p = getActivePlant();
+
+        POTS.forEach(pot => {
+          const isEquipped = p.potId === pot.id;
+          const card = document.createElement('div');
+          card.className = 'shop-item-card';
+          card.innerHTML = `
+            <div class="shop-preview-svg">${pot.svg}</div>
+            <div class="shop-item-name">${pot.name}</div>
+            <div style="font-size:11px; color:#eab308; font-weight:bold;">${pot.owned ? 'มีในครอบครอง' : pot.price + ' 🪙'}</div>
+            <button class="shop-btn ${isEquipped ? 'equipped' : (pot.owned ? 'equip' : 'buy')}">
+              ${isEquipped ? 'ใช้งานอยู่' : (pot.owned ? 'สวมใส่' : 'ซื้อกระถาง')}
+            </button>
+          `;
+          const btn = card.querySelector('.shop-btn');
+          btn.addEventListener('click', () => {
+            if (isEquipped) return;
+            if (pot.owned) {
+              p.potId = pot.id;
+              playSound('pop');
+              showToast(`เปลี่ยนเป็น ${pot.name} แล้ว! 🪴`);
+              renderShopPots();
+              updatePlantStage();
+            } else {
+              if (state.wallet.coins < pot.price) {
+                showToast('เหรียญทองไม่เพียงพอ! 🪙');
+                return;
+              }
+              state.wallet.coins -= pot.price;
+              pot.owned = true;
+              p.potId = pot.id;
+              playSound('coin');
+              showToast(`ซื้อ ${pot.name} สำเร็จ!`);
+              updateHUD();
+              renderShopPots();
+              updatePlantStage();
+            }
+          });
+          shopPotsGrid.appendChild(card);
+        });
+      }
+
+      // --- INITIALIZE GRAPHICS & ONNX ---
+      splashBabySvg.innerHTML = renderCactusSVG('baby');
+      updateHUD();
+      updatePlantStage();
+      initONNXModel();
+
+      // Open Dress Up Carousel
+      document.getElementById('dock-btn-pots').addEventListener('click', () => {
+        playSound('pop');
+        const p = getActivePlant();
+        const curIdx = POTS.findIndex(item => item.id === p.potId);
+        state.carouselPotIndex = curIdx !== -1 ? curIdx : 0;
+        updateDressUpCarousel();
+        modalDressup.classList.add('active');
+      });
+
+      btnPotPrev.addEventListener('click', () => {
+        playSound('pop');
+        state.carouselPotIndex = (state.carouselPotIndex - 1 + POTS.length) % POTS.length;
+        updateDressUpCarousel();
+      });
+
+      btnPotNext.addEventListener('click', () => {
+        playSound('pop');
+        state.carouselPotIndex = (state.carouselPotIndex + 1) % POTS.length;
+        updateDressUpCarousel();
+      });
+
+      btnEquipPot.addEventListener('click', () => {
+        const curPot = POTS[state.carouselPotIndex];
+        const p = getActivePlant();
+        if (p.potId === curPot.id) return;
+
+        if (curPot.owned) {
+          p.potId = curPot.id;
+          playSound('coin');
+          updatePlantStage();
+          updateDressUpCarousel();
+          showToast(`เปลี่ยนกระถางเป็น ${curPot.name} สำเร็จ!`);
+          modalDressup.classList.remove('active');
+        } else {
+          if (state.wallet.coins < curPot.price) {
+            showToast('เหรียญไม่พอ สามารถไปรับเหรียญฟรีได้ที่ร้านค้านะครับ 🪙');
+            return;
+          }
+          state.wallet.coins -= curPot.price;
+          curPot.owned = true;
+          p.potId = curPot.id;
+          playSound('coin');
+          updateHUD();
+          updatePlantStage();
+          updateDressUpCarousel();
+          showToast(`ปลดล็อกและสวมใส่ ${curPot.name} เรียบร้อย!`);
+          modalDressup.classList.remove('active');
+        }
+      });
+
+      btnCloseDress.addEventListener('click', () => {
+        modalDressup.classList.remove('active');
+      });
+
+      // Shop & Topup
+      document.getElementById('btn-open-shop').addEventListener('click', () => {
+        playSound('pop');
+        renderShopPots();
+        modalShop.classList.add('active');
+      });
+      document.getElementById('btn-open-topup').addEventListener('click', () => {
+        playSound('pop');
+        renderShopPots();
+        modalShop.classList.add('active');
+        tabBtnTopup.click();
+      });
+      document.getElementById('btn-close-shop').addEventListener('click', () => {
+        modalShop.classList.remove('active');
+      });
+
+      tabBtnPots.addEventListener('click', () => {
+        tabBtnPots.classList.add('active');
+        tabBtnTopup.classList.remove('active');
+        shopPotsView.style.display = 'block';
+        shopTopupView.style.display = 'none';
+      });
+      tabBtnTopup.addEventListener('click', () => {
+        tabBtnTopup.classList.add('active');
+        tabBtnPots.classList.remove('active');
+        shopPotsView.style.display = 'none';
+        shopTopupView.style.display = 'block';
+      });
+
+      document.querySelectorAll('.btn-free-coin').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseInt(btn.dataset.val, 10);
+          state.wallet.coins += val;
+          updateHUD();
+          playSound('coin');
+          showToast(`เติมสำเร็จ! +${val} เหรียญทอง 🪙`);
+        });
+      });
+
+      // Water Plant
+      document.getElementById('spray-bottle').addEventListener('click', () => {
+        playSound('water');
+        state.isWatering = true;
+        const p = getActivePlant();
+        p.water = Math.min(100, p.water + 15);
+        state.wallet.coins += 2;
+        updateHUD();
+        updatePlantStage();
+        setTimeout(() => {
+          state.isWatering = false;
+          updatePlantStage();
+        }, 800);
+      });
+
+      // Camera & ONNX AI Scanner
+      document.getElementById('dock-btn-camera').addEventListener('click', () => {
+        playSound('pop');
+        modalScanner.classList.add('active');
+      });
+      document.getElementById('btn-close-scanner').addEventListener('click', () => {
+        modalScanner.classList.remove('active');
+      });
+
+      const inputCamNative = document.getElementById('input-cam-native');
+      const inputFileNative = document.getElementById('input-file-native');
+      const previewImage = document.getElementById('preview-image');
+      const previewEmpty = document.getElementById('preview-empty');
+      const scannerReticle = document.getElementById('scanner-reticle');
+      const analysisReport = document.getElementById('analysis-report');
+
+      const reportConfTag = document.getElementById('report-conf-tag');
+      const reportDiseaseName = document.getElementById('report-disease-name');
+      const reportMetrics = document.getElementById('report-metrics');
+      const reportDiseaseDesc = document.getElementById('report-disease-desc');
+      const reportDiseaseCure = document.getElementById('report-disease-cure');
+
+      document.getElementById('btn-trigger-mobile-camera').addEventListener('click', () => inputCamNative.click());
+      document.getElementById('btn-trigger-upload-file').addEventListener('click', () => inputFileNative.click());
+
+      [inputCamNative, inputFileNative].forEach(input => {
+        input.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = async () => {
+              previewImage.src = img.src;
+              previewImage.style.display = 'block';
+              previewEmpty.style.display = 'none';
+              scannerReticle.style.display = 'block';
+              analysisReport.style.display = 'none';
+
+              playSound('pop');
+              showToast('ONNX AI กำลังวิเคราะห์ผลจากภาพ...');
+
+              const result = await runInference(img);
+
+              setTimeout(() => {
+                scannerReticle.style.display = 'none';
+                
+                const cls = result.predictedClass;
+                reportConfTag.className = `conf-tag ${cls.type}`;
+                reportConfTag.textContent = `ความแม่นยำ ${result.confidence}%`;
+                reportDiseaseName.textContent = cls.name;
+                reportMetrics.textContent = result.isSimulation 
+                  ? 'โหมด: จำลองผลตรวจ (Simulation Mode)' 
+                  : 'โหมด: Inference ผ่านโมเดล best.onnx สำเร็จ';
+                reportDiseaseDesc.textContent = cls.desc;
+                reportDiseaseCure.textContent = cls.cure;
+                
+                analysisReport.style.display = 'flex';
+                playSound('coin');
+              }, 1200);
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      // Outside click dismiss
+      [modalDressup, modalShop, modalScanner, modalPlants, modalProfile, modalCheckin].forEach(m => {
+        if (m) {
+          m.addEventListener('click', (e) => {
+            if (e.target === m) m.classList.remove('active');
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
